@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>教師日誌 Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* iOS 風格字體優化 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* 卡片玻璃擬態效果 */
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); }
+        /* 按鈕點擊效果 */
+        .btn-press:active { transform: scale(0.96); transition: transform 0.1s; }
+        /* iPhone 底部安全區域 */
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-slate-800 text-white pt-10 pb-4 px-4 shadow-lg shrink-0">
+        <div class="flex justify-between items-center mb-3">
+            <h1 class="text-xl font-bold tracking-wide"><i class="fas fa-graduation-cap text-yellow-400 mr-2"></i>教師日誌 Pro</h1>
+            <input type="date" id="datePicker" class="bg-slate-700 text-white border-none rounded px-3 py-1 text-sm font-medium outline-none focus:ring-2 focus:ring-yellow-400 transition">
+        </div>
+        <div class="flex gap-2">
+            <div class="flex-1 bg-slate-700/50 rounded p-1 flex items-center px-2">
+                <i class="fas fa-user-shield text-xs text-slate-400 mr-2"></i>
+                <input type="text" id="leaderName" placeholder="值日幹部" class="bg-transparent w-full text-sm text-white placeholder-slate-500 outline-none">
+            </div>
+            <div class="flex-1 bg-slate-700/50 rounded p-1 flex items-center px-2">
+                <i class="fas fa-broom text-xs text-slate-400 mr-2"></i>
+                <input type="text" id="dutyName" placeholder="值日生" class="bg-transparent w-full text-sm text-white placeholder-slate-500 outline-none">
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 pb-32 no-scrollbar space-y-4">
+        
+        <section class="glass-card rounded-2xl p-4 shadow-sm">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">每日統計 Dashboard</h2>
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="text-center p-2 bg-rose-50 rounded-xl border border-rose-100">
+                    <span class="block text-xs text-rose-400 mb-1">遲到</span>
+                    <input type="number" inputmode="numeric" id="countLate" placeholder="0" class="w-full text-center bg-transparent text-2xl font-bold text-rose-600 outline-none p-0">
+                </div>
+                <div class="text-center p-2 bg-amber-50 rounded-xl border border-amber-100">
+                    <span class="block text-xs text-amber-400 mb-1">事病假</span>
+                    <input type="number" inputmode="numeric" id="countLeave" placeholder="0" class="w-full text-center bg-transparent text-2xl font-bold text-amber-600 outline-none p-0">
+                </div>
+                <div class="text-center p-2 bg-slate-100 rounded-xl border border-slate-200">
+                    <span class="block text-xs text-slate-400 mb-1">缺曠</span>
+                    <input type="number" inputmode="numeric" id="countAbsent" placeholder="0" class="w-full text-center bg-transparent text-2xl font-bold text-slate-600 outline-none p-0">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button id="checkContact" onclick="toggleCheck(this)" class="flex-1 py-2 text-xs font-medium bg-slate-50 text-slate-400 border border-slate-200 rounded-lg transition btn-press">
+                    <i class="far fa-square mr-1"></i> 聯絡簿缺
+                </button>
+                <button id="checkHomework" onclick="toggleCheck(this)" class="flex-1 py-2 text-xs font-medium bg-slate-50 text-slate-400 border border-slate-200 rounded-lg transition btn-press">
+                    <i class="far fa-square mr-1"></i> 作業缺交
+                </button>
+            </div>
+        </section>
+
+        <div id="periodsContainer" class="space-y-3">
+            </div>
+
+        <section class="glass-card rounded-2xl p-4 shadow-sm">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">備註事項 Note</h2>
+            <textarea id="noteArea" class="w-full bg-slate-50 rounded-xl p-3 text-sm text-slate-700 border border-slate-200 outline-none focus:border-slate-400 focus:bg-white transition resize-none" rows="3" placeholder="例如：今日發下通知單..."></textarea>
+        </section>
+
+        <div class="text-center text-xs text-slate-400 py-4">
+            所有的紀錄都會自動儲存在此手機中
+        </div>
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 pb-6 safe-bottom shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-40 flex gap-3">
+        <button onclick="exportToCSV()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-emerald-200 btn-press flex justify-center items-center text-sm">
+            <i class="fas fa-file-excel mr-2"></i> 匯出 Excel
+        </button>
+        <button onclick="generateSummary()" class="flex-[1.5] bg-slate-800 text-white rounded-xl py-3 font-bold shadow-lg shadow-slate-300 btn-press flex justify-center items-center text-sm">
+            <i class="fas fa-copy mr-2"></i> 複製文字摘要
+        </button>
+    </div>
+
+    <div id="modalOverlay" class="hidden fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 transition-opacity opacity-0 flex items-end sm:items-center justify-center">
+        <div id="modalContent" class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl transform translate-y-full transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 id="modalTitle" class="text-lg font-bold text-slate-800">新增紀錄</h3>
+                    <p id="modalSubtitle" class="text-xs text-slate-400">請輸入座號</p>
+                </div>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <input type="tel" id="studentInput" class="w-full text-center text-3xl font-bold tracking-widest bg-slate-50 border-2 border-slate-200 rounded-xl py-4 mb-6 focus:border-blue-500 focus:bg-white outline-none transition placeholder-slate-300" placeholder="座號" autocomplete="off">
+            
+            <button onclick="confirmRecord()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 btn-press text-lg">
+                確認紀錄
+            </button>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-full text-sm shadow-xl z-[60] transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none flex items-center">
+        <i class="fas fa-check-circle text-green-400 mr-2"></i> <span id="toastMsg">完成</span>
+    </div>
+
+    <script>
+        // --- 1. 初始化設定 ---
+        const periods = ['早修', '第一節', '第二節', '第三節', '第四節', '午休', '第五節', '第六節', '第七節', '第八節'];
+        const behaviors = [
+            { name: '遲到', icon: 'fa-clock', color: 'text-orange-600 bg-orange-50 border-orange-200' },
+            { name: '吵鬧', icon: 'fa-volume-up', color: 'text-red-600 bg-red-50 border-red-200' },
+            { name: '睡覺', icon: 'fa-bed', color: 'text-purple-600 bg-purple-50 border-purple-200' },
+            { name: '手機', icon: 'fa-mobile-alt', color: 'text-pink-600 bg-pink-50 border-pink-200' },
+            { name: '未帶', icon: 'fa-briefcase', color: 'text-slate-600 bg-slate-100 border-slate-200' },
+            { name: '優良', icon: 'fa-thumbs-up', color: 'text-green-600 bg-green-50 border-green-200' }
+        ];
+
+        let appData = {
+            records: {}, // 結構: { '2023-11-29': { periodIndex: ['遲到(05)', ...] } }
+            meta: {}     // 結構: { '2023-11-29': { late: 1, leave: 0, absent: 0, note: '', check1: false, check2: false ... } }
+        };
+
+        let currentDate = new Date().toISOString().split('T')[0];
+        let currentPeriodIdx = null;
+        let currentBehavior = null;
+
+        // 啟動程式
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('datePicker').value = currentDate;
+            loadDataFromLocal(); // 讀取舊資料
+            renderApp();
+            
+            // 監聽日期變更
+            document.getElementById('datePicker').addEventListener('change', (e) => {
+                currentDate = e.target.value;
+                renderApp();
+            });
+
+            // 自動儲存監聽 (針對輸入框)
+            const inputs = ['leaderName', 'dutyName', 'countLate', 'countLeave', 'countAbsent', 'noteArea'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', saveDataToLocal);
+            });
+        });
+
+        // --- 2. 畫面渲染邏輯 ---
+        function renderApp() {
+            // 1. 還原今日的 Meta 資料 (出缺席、備註)
+            const todayMeta = appData.meta[currentDate] || {};
+            document.getElementById('leaderName').value = todayMeta.leader || '';
+            document.getElementById('dutyName').value = todayMeta.duty || '';
+            document.getElementById('countLate').value = todayMeta.late || '';
+            document.getElementById('countLeave').value = todayMeta.leave || '';
+            document.getElementById('countAbsent').value = todayMeta.absent || '';
+            document.getElementById('noteArea').value = todayMeta.note || '';
+            
+            updateCheckButton('checkContact', todayMeta.checkContact);
+            updateCheckButton('checkHomework', todayMeta.checkHomework);
+
+            // 2. 渲染節次列表
+            const container = document.getElementById('periodsContainer');
+            container.innerHTML = '';
+            
+            const todayRecords = appData.records[currentDate] || {};
+
+            periods.forEach((p, idx) => {
+                // 檢查該節次是否有紀錄
+                const pRecords = todayRecords[idx] || [];
+                const hasData = pRecords.length > 0;
+                
+                const section = document.createElement('div');
+                section.className = 'glass-card rounded-2xl overflow-hidden transition-all duration-300';
+                
+                // 標題列
+                let html = `
+                    <div onclick="toggleAccordion(${idx})" class="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-50 transition">
+                        <div class="flex items-center">
+                            <div class="w-1 h-6 bg-blue-500 rounded-full mr-3"></div>
+                            <span class="font-bold text-slate-700">${p}</span>
+                            ${hasData ? `<span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full font-bold">${pRecords.length}</span>` : ''}
+                        </div>
+                        <i id="arrow-${idx}" class="fas fa-chevron-down text-slate-300 transition-transform duration-300 ${hasData ? 'rotate-180' : ''}"></i>
+                    </div>
+                `;
+
+                // 內容區 (預設如果有資料就展開，沒資料就收合)
+                html += `
+                    <div id="content-${idx}" class="${hasData ? '' : 'hidden'} border-t border-slate-100 bg-white/50">
+                        <div class="p-3 grid grid-cols-3 gap-2 overflow-x-auto no-scrollbar">
+                            ${behaviors.map(b => `
+                                <button onclick="openModal(${idx}, '${b.name}')" 
+                                    class="flex flex-col items-center justify-center py-2 rounded-xl border ${b.color} active:scale-95 transition">
+                                    <i class="fas ${b.icon} mb-1 opacity-80"></i>
+                                    <span class="text-xs font-bold">${b.name}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                        <div class="px-4 pb-4 pt-0">
+                            <div id="list-${idx}" class="flex flex-wrap gap-2">
+                                ${pRecords.length > 0 ? pRecords.map((r, rIdx) => `
+                                    <span onclick="deleteRecord(${idx}, ${rIdx})" class="inline-flex items-center bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-sm text-slate-700 shadow-sm cursor-pointer hover:bg-red-50 hover:text-red-600 hover:border-red-200 group transition">
+                                        ${r}
+                                        <i class="fas fa-times ml-2 text-slate-300 group-hover:text-red-400 text-xs"></i>
+                                    </span>
+                                `).join('') : '<span class="text-xs text-slate-400 italic pl-1">尚無紀錄...</span>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                section.innerHTML = html;
+                container.appendChild(section);
+            });
+        }
+
+        // --- 3. 互動邏輯 ---
+        function toggleAccordion(idx) {
+            const content = document.getElementById(`content-${idx}`);
+            const arrow = document.getElementById(`arrow-${idx}`);
+            content.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        function toggleCheck(btn) {
+            const isChecked = btn.classList.contains('bg-rose-500'); // 檢查目前的狀態
+            const id = btn.id;
+            
+            // 更新 UI
+            updateCheckButton(id, !isChecked);
+            
+            // 存檔
+            if (!appData.meta[currentDate]) appData.meta[currentDate] = {};
+            appData.meta[currentDate][id] = !isChecked;
+            saveToLocal();
+        }
+
+        function updateCheckButton(id, checked) {
+            const btn = document.getElementById(id);
+            if (checked) {
+                btn.classList.remove('bg-slate-50', 'text-slate-400', 'border-slate-200');
+                btn.classList.add('bg-rose-500', 'text-white', 'border-rose-600', 'shadow-md', 'shadow-rose-200');
+                btn.innerHTML = `<i class="fas fa-check-square mr-1"></i> 已標記`;
+            } else {
+                btn.classList.add('bg-slate-50', 'text-slate-400', 'border-slate-200');
+                btn.classList.remove('bg-rose-500', 'text-white', 'border-rose-600', 'shadow-md', 'shadow-rose-200');
+                const label = id === 'checkContact' ? '聯絡簿缺' : '作業缺交';
+                btn.innerHTML = `<i class="far fa-square mr-1"></i> ${label}`;
+            }
+        }
+
+        // --- 4. Modal 彈窗與資料新增 ---
+        function openModal(idx, behavior) {
+            currentPeriodIdx = idx;
+            currentBehavior = behavior;
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            const title = document.getElementById('modalTitle');
+            const sub = document.getElementById('modalSubtitle');
+            
+            title.innerText = behavior;
+            sub.innerText = `${periods[idx]} - 請輸入對象`;
+            document.getElementById('studentInput').value = '';
+            
+            overlay.classList.remove('hidden');
+            // 動畫與聚焦
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                content.classList.remove('translate-y-full');
+                document.getElementById('studentInput').focus();
+            }, 10);
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            
+            content.classList.add('translate-y-full');
+            overlay.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
+
+        function confirmRecord() {
+            const input = document.getElementById('studentInput').value.trim();
+            // 如果沒填寫，自動標記為空字串，或您可以決定必須填寫
+            const recordText = input ? `${currentBehavior}(${input})` : currentBehavior;
+            
+            if (!appData.records[currentDate]) appData.records[currentDate] = {};
+            if (!appData.records[currentDate][currentPeriodIdx]) appData.records[currentDate][currentPeriodIdx] = [];
+            
+            appData.records[currentDate][currentPeriodIdx].push(recordText);
+            
+            saveToLocal();
+            renderApp(); // 重新渲染畫面
+            closeModal();
+            showToast('已紀錄');
+        }
+
+        function deleteRecord(pIdx, rIdx) {
+            if (confirm('確定要刪除這筆紀錄嗎？')) {
+                appData.records[currentDate][pIdx].splice(rIdx, 1);
+                saveToLocal();
+                renderApp();
+                showToast('已刪除');
+            }
+        }
+
+        // --- 5. 資料存取 (核心) ---
+        function saveDataToLocal() {
+            // 抓取 Meta 輸入框的值
+            if (!appData.meta[currentDate]) appData.meta[currentDate] = {};
+            appData.meta[currentDate].leader = document.getElementById('leaderName').value;
+            appData.meta[currentDate].duty = document.getElementById('dutyName').value;
+            appData.meta[currentDate].late = document.getElementById('countLate').value;
+            appData.meta[currentDate].leave = document.getElementById('countLeave').value;
+            appData.meta[currentDate].absent = document.getElementById('countAbsent').value;
+            appData.meta[currentDate].note = document.getElementById('noteArea').value;
+            
+            saveToLocal();
+        }
+
+        function saveToLocal() {
+            localStorage.setItem('teacherLogPro_v3', JSON.stringify(appData));
+        }
+
+        function loadDataFromLocal() {
+            const stored = localStorage.getItem('teacherLogPro_v3');
+            if (stored) {
+                appData = JSON.parse(stored);
+            }
+        }
+
+        // --- 6. 匯出與複製功能 ---
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            t.classList.remove('opacity-0', 'translate-y-[-20px]');
+            setTimeout(() => t.classList.add('opacity-0', 'translate-y-[-20px]'), 2000);
+        }
+
+        function generateSummary() {
+            const meta = appData.meta[currentDate] || {};
+            const records = appData.records[currentDate] || {};
+            
+            let text = `📅 ${currentDate} 班級日誌\n`;
+            if (meta.leader) text += `幹部：${meta.leader} / 值日：${meta.duty || '無'}\n`;
+            text += `----------------\n`;
+            text += `遲到: ${meta.late || 0} / 事病: ${meta.leave || 0} / 缺曠: ${meta.absent || 0}\n`;
+            if (meta.checkContact) text += `⚠️ 聯絡簿有缺\n`;
+            if (meta.checkHomework) text += `⚠️ 作業有缺\n`;
+            
+            let hasRecord = false;
+            periods.forEach((p, idx) => {
+                if (records[idx] && records[idx].length > 0) {
+                    text += `【${p}】${records[idx].join('、')}\n`;
+                    hasRecord = true;
+                }
+            });
+            
+            if (!hasRecord) text += `(今日課堂狀況良好)\n`;
+            
+            if (meta.note) {
+                text += `----------------\n`;
+                text += `備註：${meta.note}\n`;
+            }
+
+            navigator.clipboard.writeText(text).then(() => showToast('已複製摘要！'));
+        }
+
+        function exportToCSV() {
+            // 將所有日期的資料扁平化
+            let csvContent = "\uFEFF"; // UTF-8 BOM 讓 Excel 顯示中文正常
+            csvContent += "日期,節次,內容,座號/備註,類型\n"; // CSV Header
+
+            // 遍歷所有日期
+            Object.keys(appData.records).sort().forEach(date => {
+                const dayRecords = appData.records[date];
+                // 遍歷該日的節次
+                Object.keys(dayRecords).forEach(pIdx => {
+                    const periodName = periods[pIdx];
+                    dayRecords[pIdx].forEach(item => {
+                        // 解析 "遲到(05)" 這種格式
+                        let type = item.split('(')[0];
+                        let note = item.includes('(') ? item.split('(')[1].replace(')', '') : '';
+                        csvContent += `${date},${periodName},${item},${note},${type}\n`;
+                    });
+                });
+            });
+
+            // 下載檔案
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `班級日誌匯出_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Excel(CSV) 下載中...');
+        }
+    </script>
+</body>
+</html>
